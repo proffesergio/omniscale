@@ -19,6 +19,9 @@ Decision dates reflect the conversation available on 2026-10-14. User choices ou
 | D13 | Automated nurture: lead follow-up sequences + booking reminders via Resend    | Accepted 2026-10-15; outbox-backed, unsubscribe handling required                |
 | D14 | Testimonial/case-study approval workflow (source URL + approval date)         | Accepted 2026-10-15; nothing public without evidence, per D06                    |
 | D15 | Pricing/engagement-models page with strict no-guaranteed-ROI copy            | Accepted 2026-10-15; tiers route into audit/booking                              |
+| D16 | Git on `main` + GitHub Actions CI + Vercel auto-deploy (Root Dir `apps/web`)  | Accepted 2026-10-15; E2E stays local (Chrome + prod build)                       |
+| D17 | Manual BD mobile-bank payments (bKash/Nagad/Rocket), personal QR managed in admin, TrxID verification queue; no gateway, no auto-capture | Accepted 2026-10-15; QR under `public/qr/` or data URI (CSP), team notified via CONTACT_EMAIL |
+| D18 | Pricing figures in `src/lib/pricing.ts` are owner-unconfirmed placeholders     | Pending owner confirmation before launch; payment alone never implies ROI         |
 
 ## Implementation choices to preserve unless evidence warrants revision
 

@@ -3,7 +3,7 @@
 Checkpoint date: 2026-10-15 (Asia/Dhaka).
 Checkpoint source: main implementation and local verification; supersedes the earlier side-conversation inventory.
 Overall state: **implemented and locally verified; live services not configured; not deployed**.
-Next milestone: connect a Supabase staging project, provision the admin, and verify real submissions and bookings.
+Next milestone: push `main` to GitHub, connect Vercel, provision staging Supabase, verify real submissions and bookings.
 
 ## Implemented behavior
 
@@ -17,7 +17,19 @@ Next milestone: connect a Supabase staging project, provision the admin, and ver
 - Authenticated notification worker with leases, retries, generic signed webhooks, Slack/Discord adapters, and optional Resend appointment emails.
 - Private optional Stripe evidence module checks explicitly approved captured, undisputed live charges and keeps currency totals separate. It does not claim verified ROI or publish payment data.
 
-All previously missing public/admin routes exist. The repository README describes setup, formulas, privacy behavior, operation, testing, and deployment prerequisites.
+## Implemented behavior (continued 2026-10-15)
+
+- Keyset pagination: admin slots/bookings/audits/manual-payments page 50 at a time
+  (`sAfter`/`bAfter`/`aAfter`/`pAfter` + `pStatus`); availability pages via
+  `GET /api/availability?after=&limit=` (max 200) with “Show more times” in the calendar.
+  New migration `002_pagination.sql` redefines `available_slots(after, limit)`.
+- Manual BD payments: `003_payments.sql` (`payment_methods`, `manual_payments`,
+  `submit_manual_payment` RPC with idempotency + `payment` outbox entries), admin QR/method
+  management and TrxID verification queue, `/pricing` page with engagement models and a
+  TrxID submit form, team notification to `CONTACT_EMAIL` via Resend. No gateway integration.
+- Git repo initialized on `main` (commits `0aca55e`, `2254d22`); GitHub Actions CI runs
+  `lint → typecheck → test → build`; `docs/DEPLOY.md` covers the Vercel flow.
+  No remote configured yet — push and Vercel import are the next human steps.
 
 ## Verification ledger
 
@@ -27,10 +39,10 @@ Commands were run from the project root using the `rtk proxy` prefix.
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run lint`            | Passed against final source                                                                                                                 |
 | `npm run typecheck`       | Passed; final `npm run build` also completed TypeScript checks                                                                              |
-| `npm test`                | 32 tests passed across financial, validation, request security, Stripe adapter, and PostgreSQL suites                                       |
-| PostgreSQL suite          | 12 tests passed; unmodified migration applied to PGlite with btree_gist and modeled Supabase auth roles                                     |
+| `npm test`                | 45 tests passed across financial, validation, request security, Stripe adapter, pagination, payments, and PostgreSQL suites |
+| PostgreSQL suite          | 14 tests passed; all migrations applied to PGlite in filename order              |
 | `npm run build`           | Passed on Next.js 16.4.1; 22 static/generated outputs plus dynamic API/admin routes                                                         |
-| `npm run test:e2e`        | 14 tests passed on desktop and mobile Chrome projects against the production build                                                          |
+| `npm run test:e2e`        | 16 tests passed on desktop and mobile Chrome projects against the production build (incl. new pricing fail-closed test) |
 | Accessibility and visuals | No serious/critical WCAG A/AA findings on tested homepage viewports; no horizontal overflow; screenshots visually reviewed                  |
 | `npm audit --omit=dev`    | 0 vulnerabilities reported                                                                                                                  |
 | Full dependency audit     | 5 high development-tool advisories remain via Next ESLint → fast-glob → micromatch → braces; no compatible upstream fix in the audit report |
@@ -50,8 +62,9 @@ Screenshots: `apps/web/test-results/omniscale-desktop.png` and `apps/web/test-re
 ## Ordered continuation queue
 
 1. Read current files and configuration presence without printing secrets; preserve any newer user/session changes.
-2. Follow the root README and `apps/web/.env.example`: apply `supabase/migrations/001_omniscale.sql`, set server-only keys and random secrets, create an auth user, and add its UUID to `public.admins`.
+2. Push `main` to GitHub (`git remote add origin … && git push -u origin main`), import into Vercel with Root Directory `apps/web` (see `docs/DEPLOY.md`).
 3. Smoke-test real audit storage, authenticated admin access, booking/cancellation/rescheduling, and simultaneous reservations from independent connections.
+4. Confirm engagement prices in `src/lib/pricing.ts`, publish real payment methods + QR scans via the admin panel, and smoke-test a TrxID submission → team email → verify flow.
 4. Configure notification destination, sender, and authenticated scheduler; verify delivery and retry behavior. No outbound notification was sent during development.
 5. Supply privacy/contact information, establish a retention policy, publish initial availability, and choose the production domain/hosting target.
 6. Deploy the standard Next.js app and verify the live environment. Approved client evidence remains optional; current illustrative content is intentional.

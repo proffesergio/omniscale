@@ -160,6 +160,37 @@
       ]
     },
     {
+      "id": "pricing",
+      "kind": "page",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/app/pricing/page.tsx",
+        "apps/web/src/lib/pricing.ts",
+        "apps/web/src/components/marketing/payment-form.tsx"
+      ]
+    },
+    {
+      "id": "payments_api",
+      "kind": "endpoint",
+      "status": "authored",
+      "paths": ["apps/web/src/app/api/payments/route.ts"]
+    },
+    {
+      "id": "payments_admin",
+      "kind": "feature",
+      "status": "authored_live_unverified",
+      "paths": [
+        "apps/web/src/app/admin/actions.ts",
+        "apps/web/src/components/admin/dashboard.tsx"
+      ]
+    },
+    {
+      "id": "release_train",
+      "kind": "release",
+      "status": "authored",
+      "paths": [".github/workflows/ci.yml", "docs/DEPLOY.md"]
+    },
+    {
       "id": "verification",
       "kind": "quality_gate",
       "status": "locally_verified",
@@ -168,6 +199,8 @@
         "apps/web/tests/security.test.ts",
         "apps/web/tests/database.test.ts",
         "apps/web/tests/stripe-proof.test.ts",
+        "apps/web/tests/pagination.test.ts",
+        "apps/web/tests/payments.test.ts",
         "apps/web/tests/e2e/site.spec.ts"
       ]
     },
@@ -273,6 +306,26 @@
       "source": "trust_verification",
       "target": "blueprints",
       "relation": "must_not_invent_evidence"
+    },
+    {
+      "source": "payments_api",
+      "target": "intake",
+      "relation": "calls"
+    },
+    {
+      "source": "pricing",
+      "target": "payments_api",
+      "relation": "calls"
+    },
+    {
+      "source": "payments_admin",
+      "target": "database_client",
+      "relation": "uses"
+    },
+    {
+      "source": "release_train",
+      "target": "deployment",
+      "relation": "deploys_on_green"
     }
   ]
 }
