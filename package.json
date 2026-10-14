@@ -1,0 +1,19 @@
+{
+  "name": "omniscale",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@omniscale/web",
+    "build": "npm run build --workspace=@omniscale/web",
+    "start": "npm run start --workspace=@omniscale/web",
+    "lint": "npm run lint --workspace=@omniscale/web",
+    "typecheck": "npm run typecheck --workspace=@omniscale/web",
+    "test": "npm run test --workspace=@omniscale/web",
+    "test:e2e": "npm run test:e2e --workspace=@omniscale/web"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

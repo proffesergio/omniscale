@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "project": "OmniScale",
+  "asOf": "2026-10-15",
+  "evidence": "Main implementation: production build, lint, 32 unit/security/embedded-PostgreSQL tests and desktop/mobile browser checks run. See CURRENT.md for final browser count. Live Supabase auth, multi-connection database contention, provider delivery and deployment remain unverified.",
+  "statusLegend": {
+    "authored": "Source exists; not proof of correctness.",
+    "partial": "Some source exists; required work remains.",
+    "planned": "Not found in the inspected inventory.",
+    "authored_unapplied": "SQL exists; application to a database is unverified.",
+    "not_run": "No successful execution evidence recorded.",
+    "not_started": "No implementation or release evidence recorded.",
+    "locally_verified": "Relevant local checks pass; live integrations are not implied.",
+    "authored_live_unverified": "Implementation exists; live credentials or external service verification remain.",
+    "tested_unapplied": "Unmodified SQL tested in embedded PostgreSQL; not applied to live Supabase."
+  },
+  "nodes": [
+    {
+      "id": "web",
+      "kind": "workspace",
+      "status": "locally_verified",
+      "paths": ["apps/web/package.json", "apps/web/tsconfig.json", "apps/web/next.config.ts"]
+    },
+    {
+      "id": "landing",
+      "kind": "page",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/app/page.tsx",
+        "apps/web/src/app/layout.tsx",
+        "apps/web/src/styles/globals.css"
+      ]
+    },
+    {
+      "id": "calculator",
+      "kind": "feature",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/components/marketing/funnel-calculator.tsx",
+        "apps/web/src/lib/funnel.ts",
+        "apps/web/src/app/calculator/page.tsx"
+      ]
+    },
+    {
+      "id": "currency",
+      "kind": "feature",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/hooks/use-currency.tsx",
+        "apps/web/src/lib/currency.ts",
+        "apps/web/src/app/api/locale/route.ts"
+      ]
+    },
+    {
+      "id": "blueprints",
+      "kind": "feature",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/lib/blueprints.ts",
+        "apps/web/src/components/marketing/blueprint-gallery.tsx",
+        "apps/web/src/app/case-studies/page.tsx",
+        "apps/web/src/app/case-studies/[slug]/page.tsx"
+      ]
+    },
+    {
+      "id": "audit_api",
+      "kind": "endpoint",
+      "status": "authored",
+      "paths": ["apps/web/src/app/api/audit/route.ts"]
+    },
+    {
+      "id": "audit_wizard",
+      "kind": "feature",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/app/audit/page.tsx",
+        "apps/web/src/components/marketing/audit-wizard.tsx"
+      ]
+    },
+    {
+      "id": "booking_api",
+      "kind": "endpoint",
+      "status": "authored",
+      "paths": [
+        "apps/web/src/app/api/bookings/route.ts",
+        "apps/web/src/app/api/bookings/manage/route.ts",
+        "apps/web/src/app/api/availability/route.ts"
+      ]
+    },
+    {
+      "id": "booking_ui",
+      "kind": "feature",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/src/app/booking/page.tsx",
+        "apps/web/src/app/booking/manage/page.tsx",
+        "apps/web/src/components/marketing/booking-calendar.tsx",
+        "apps/web/src/components/marketing/manage-booking.tsx",
+        "apps/web/src/lib/calendar.ts"
+      ]
+    },
+    {
+      "id": "admin",
+      "kind": "feature",
+      "status": "authored_live_unverified",
+      "paths": [
+        "apps/web/src/proxy.ts",
+        "apps/web/src/lib/supabase.ts",
+        "apps/web/src/app/admin/page.tsx",
+        "apps/web/src/app/admin/actions.ts",
+        "apps/web/src/components/admin/dashboard.tsx"
+      ]
+    },
+    {
+      "id": "intake",
+      "kind": "service",
+      "status": "authored",
+      "paths": ["apps/web/src/lib/intake.ts"]
+    },
+    {
+      "id": "validation",
+      "kind": "module",
+      "status": "authored",
+      "paths": ["apps/web/src/lib/validators.ts"]
+    },
+    {
+      "id": "security",
+      "kind": "module",
+      "status": "authored",
+      "paths": ["apps/web/src/lib/security.ts"]
+    },
+    {
+      "id": "database_client",
+      "kind": "adapter",
+      "status": "authored",
+      "paths": ["apps/web/src/lib/supabase.ts"]
+    },
+    {
+      "id": "database_schema",
+      "kind": "migration",
+      "status": "tested_unapplied",
+      "paths": ["supabase/migrations/001_omniscale.sql"]
+    },
+    {
+      "id": "notification_worker",
+      "kind": "integration",
+      "status": "authored_live_unverified",
+      "paths": [
+        "apps/web/src/app/api/internal/notifications/route.ts",
+        "apps/web/src/lib/notifications.ts"
+      ]
+    },
+    {
+      "id": "trust_verification",
+      "kind": "integration",
+      "status": "authored_live_unverified",
+      "paths": [
+        "apps/web/src/lib/stripe-proof.ts",
+        "apps/web/src/app/api/internal/stripe-proof/route.ts"
+      ]
+    },
+    {
+      "id": "verification",
+      "kind": "quality_gate",
+      "status": "locally_verified",
+      "paths": [
+        "apps/web/tests/funnel.test.ts",
+        "apps/web/tests/security.test.ts",
+        "apps/web/tests/database.test.ts",
+        "apps/web/tests/stripe-proof.test.ts",
+        "apps/web/tests/e2e/site.spec.ts"
+      ]
+    },
+    {
+      "id": "deployment",
+      "kind": "release",
+      "status": "not_started",
+      "paths": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "landing",
+      "target": "calculator",
+      "relation": "renders"
+    },
+    {
+      "source": "landing",
+      "target": "blueprints",
+      "relation": "renders"
+    },
+    {
+      "source": "landing",
+      "target": "currency",
+      "relation": "uses_via_layout"
+    },
+    {
+      "source": "calculator",
+      "target": "currency",
+      "relation": "uses"
+    },
+    {
+      "source": "audit_wizard",
+      "target": "audit_api",
+      "relation": "calls"
+    },
+    {
+      "source": "audit_api",
+      "target": "intake",
+      "relation": "calls"
+    },
+    {
+      "source": "booking_ui",
+      "target": "booking_api",
+      "relation": "calls"
+    },
+    {
+      "source": "booking_api",
+      "target": "intake",
+      "relation": "calls"
+    },
+    {
+      "source": "booking_api",
+      "target": "security",
+      "relation": "uses"
+    },
+    {
+      "source": "booking_api",
+      "target": "database_client",
+      "relation": "uses"
+    },
+    {
+      "source": "intake",
+      "target": "validation",
+      "relation": "validates_with"
+    },
+    {
+      "source": "intake",
+      "target": "security",
+      "relation": "uses"
+    },
+    {
+      "source": "intake",
+      "target": "database_client",
+      "relation": "uses"
+    },
+    {
+      "source": "security",
+      "target": "database_client",
+      "relation": "rate_limits_with"
+    },
+    {
+      "source": "admin",
+      "target": "database_client",
+      "relation": "uses"
+    },
+    {
+      "source": "database_client",
+      "target": "database_schema",
+      "relation": "requires_applied_schema"
+    },
+    {
+      "source": "database_schema",
+      "target": "notification_worker",
+      "relation": "requires_consumer_for_outbox"
+    },
+    {
+      "source": "verification",
+      "target": "deployment",
+      "relation": "gates"
+    },
+    {
+      "source": "trust_verification",
+      "target": "blueprints",
+      "relation": "must_not_invent_evidence"
+    }
+  ]
+}
