@@ -1,55 +1,109 @@
-# OmniScale
+# OmniScale — performance marketing, engineered as software
 
-A Next.js App Router website for a performance marketing and creative operations agency. TypeScript, Tailwind CSS 4, Supabase/PostgreSQL, React Hook Form, Zod, and an owned booking/admin system. Calendly was replaced with first-party scheduling at the founder’s request.
+> Research-led growth for high-ticket brands: know your numbers, audit your funnel,
+> book a strategist, and pay by mobile banking — all on one site, no third-party
+> scheduling or payment widgets required.
 
-## Run locally
+![Next.js](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8) ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3fcf8e) ![CI](https://img.shields.io/badge/CI-lint_typecheck_test_build-green) ![Status](https://img.shields.io/badge/MVP-code--complete_staging--in--progress-orange)
 
-Requires Node.js 22 or newer.
+Built in Bangladesh, for growth everywhere. OmniScale is a performance-marketing and
+creative-operations agency site where **every public feature is a working tool**, not a
+brochure: business owners can model their funnel economics, request a growth audit, book
+a discovery call, and pay for an engagement without leaving the site.
+
+---
+
+## What business owners can do here
+
+### 1. Model your funnel economics — `/calculator`
+
+An interactive ROI calculator that connects ad spend to business outcomes: CAC, gross-profit
+LTV, ROAS, and MER from your AOV, spend, conversion rate, and hook rate, with expandable
+assumptions (CPM, CTR, new-customer share, margin, lift scenarios) and a hypothetical
+efficiency-gap readout.
+
+- Runs **entirely in your browser** — inputs never leave the device.
+- Every formula is disclosed on the page; results are **modeled estimates, never guarantees**.
+- Currency-aware (USD/EUR/BDT): your manual choice wins, with location/timezone suggestion
+  as fallback. Switching currency starts a new example — it never pretends to convert money.
+
+### 2. Request a growth audit — `/audit`
+
+A three-step guided wizard (website → competitors/channels → contact) with inline
+validation. Submissions are stored durably with idempotency (retries can't duplicate),
+rate-limited against abuse, and queued for the team with at-least-once delivery.
+If the backend isn't configured yet, the page says so instead of faking success.
+
+### 3. Book a discovery call — `/booking`
+
+First-party scheduling — no Calendly embed, no account needed:
+
+- Real 30-minute slots published by the team (2 hours to 90 days out), stored in UTC and
+  shown in **your** timezone, which you can change.
+- Overlapping slots are rejected by the database; double-booking is blocked by a partial
+  unique index plus transactional locking.
+- Confirmation screen includes an **`.ics` calendar download** and a **private management
+  link** (token in the URL fragment, only its hash stored) to view or cancel.
+- Meeting details are shared by the team afterwards — the site never invents video links
+  or pretends to sync with your calendar.
+
+### 4. See engagement models and pay by mobile banking — `/pricing`
+
+Clear scopes (audit, sprint, retainer) with starting rates, then pay the way Bangladesh
+actually pays: **bKash, Nagad, Rocket, bank transfer** via personal receiving accounts and
+QR codes managed by the team. You pay in your own app, submit the transaction ID, and the
+team verifies it by hand — usually within one business day. No gateway fees, no forced
+accounts, no card required.
+
+### 5. Browse the creative lab — `/case-studies`
+
+Filterable creative concepts (E-commerce / B2B SaaS) with test targets and hypotheses.
+Radically honest by design: everything is labeled **illustrative concept work** — no
+fabricated clients, no rented testimonials, no “verified ROI” badges. Real proof only
+ships with a source URL and approval date.
+
+---
+
+## Why teams trust this stack
+
+| Concern | How it's handled |
+|---|---|
+| Honest numbers | Calculator shows its formulas; modeled vs. observed is always distinguished |
+| Honest proof | Blueprints labeled illustrative; testimonials require evidence to publish |
+| Your data | Server-only secrets, schema validation, honeypot, rate limits, RLS; privacy notice describes actual behavior |
+| Reliability | Booking + notification saved in one DB transaction; outbox retries with backoff (8 attempts); records stay authoritative if email fails |
+| No lock-in | Owned booking, owned payments, owned admin — no Calendly, no payment gateway dependency |
+
+---
+
+## For developers
+
+**Stack:** Next.js 16 App Router · strict TypeScript · Tailwind CSS 4 (CSS-first, no config file) · Supabase/PostgreSQL · React Hook Form + Zod · npm workspace (`apps/web`).
 
 ```bash
-cd /home/billsbro/Music/codex-projects/omniscale
-rtk proxy npm install
-rtk proxy npm run dev
+git clone <this-repo> && cd omniscale
+rtk proxy npm install   # plain `npm install` works where no proxy is needed
+rtk proxy npm run dev   # serves http://localhost:3000 (also 127.0.0.1:3000)
 ```
 
-Open http://localhost:3000. The marketing site and calculator work without credentials. Audit submission, booking, and admin access deliberately remain unavailable until the database is configured; the app never pretends a submission was saved.
-
-## Test the admin panel locally
-
-The admin panel needs a real database but no auth provider — one shared token
-(`ADMIN_TOKEN`) signs you in. A free Supabase project works for localhost:
-
-1. Create a free Supabase project. In its SQL editor, apply every file in
-   `supabase/migrations/` in filename order.
-2. Copy `apps/web/.env.example` to `apps/web/.env.local` and set
-   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   server-only `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SECRET` and `ADMIN_TOKEN`
-   (each secret: `openssl rand -hex 32`), plus
-   `NEXT_PUBLIC_SITE_URL=http://localhost:3000`.
-3. Restart the dev server (`npm run dev`) and open http://localhost:3000/admin.
-   Sign in with the `ADMIN_TOKEN` value — no email or Supabase user needed.
-4. Publish a slot 2+ hours ahead, then in a private window open `/booking`, reserve
-   it, and use the private management link to cancel. Back in `/admin`, try
-   close/reopen, reschedule, and the payment verification queue. Payment and booking
-   emails only send once Resend/`CONTACT_EMAIL` are set; records and the outbox queue
-   still work without them.
-5. Sign out from the toolbar and confirm `/admin` asks for the token again. A wrong
-   token is rejected without saying which part was wrong, and repeated guesses are
-   rate-limited.
+The marketing site and calculator work with zero credentials. Audit, booking, payments, and
+admin fail closed until Supabase is configured.
 
 ```bash
 rtk proxy npm run lint
 rtk proxy npm run typecheck
-rtk proxy npm test
-rtk proxy npm run build
-rtk proxy npm run test:e2e
+npm test            # 49 unit + embedded-PostgreSQL (PGlite) tests
+npm run build       # required before e2e
+npm run test:e2e    # Playwright, desktop + mobile Chrome, prod build
 ```
 
-Browser tests use `/usr/bin/google-chrome`; override `CHROME_PATH` if necessary. They launch the production server, run desktop/mobile coverage, and stop their server afterwards. The booking confirmation browser test explicitly mocks the API; database behavior is tested separately with embedded PostgreSQL. Live Supabase authentication and provider delivery still need a staging smoke test with your credentials.
+Pushes to `main` run `lint → typecheck → test → build` in GitHub Actions, then Vercel
+auto-deploys (Root Directory `apps/web`). Browser tests stay local (Chrome + prod build).
+Full launch runbook: [`docs/DEPLOY.md`](docs/DEPLOY.md). Pending work: [`docs/project-memory/BACKLOG.md`](docs/project-memory/BACKLOG.md).
 
-## Connect Supabase
+### Connect Supabase
 
-1. Create a Supabase project. Apply every file in `supabase/migrations/` in filename order once using the SQL editor or your migration tooling. It creates lead records, availability, bookings, an admin allowlist, shared rate limits, and a notification outbox with RLS enabled.
+1. Create a Supabase project. Apply every file in `supabase/migrations/` in filename order once using the SQL editor or your migration tooling. It creates lead records, availability, bookings, payment methods, an admin allowlist, shared rate limits, and a notification outbox with RLS enabled.
 2. Copy `apps/web/.env.example` to `apps/web/.env.local` and populate `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY`. A legacy service-role key can be used as the server key if required by an older project. Never prefix the server key with `NEXT_PUBLIC_`.
 3. Set a separate random `RATE_LIMIT_SECRET` of at least 32 characters. Use `openssl rand -hex 32`. Keep it stable: booking management links are derived from it. Rotating it invalidates regeneration of existing links and requires a planned migration.
 4. Set `NEXT_PUBLIC_SITE_URL` to the exact browser origin, including scheme and port. Local development accepts localhost and 127.0.0.1 on port 3000. Production requires the configured origin. Use HTTPS on the public deployment.
@@ -60,41 +114,37 @@ Browser tests use `/usr/bin/google-chrome`; override `CHROME_PATH` if necessary.
 
 6. Publish 30-minute slots in your browser’s local timezone. Only slots between two hours and 90 days ahead are bookable. Times are stored in UTC; visitors see their own timezone and can change it.
 
-The server revalidates the sealed admin session before every mutation. Public users cannot directly read leads, bookings, tokens, slots, notification payloads, or rate-limit records. Admins can view the pipeline, publish/close availability, cancel bookings, reschedule to an existing slot, and mark completed calls after their end time. Closing a slot does not cancel a reservation. There is no public signup or account-administration UI.
+The server revalidates the sealed admin session before every mutation. Public users cannot directly read leads, bookings, tokens, slots, notification payloads, or rate-limit records. Admins can view the pipeline, publish/close availability, cancel bookings, reschedule to an existing slot, verify payments, and mark completed calls after their end time. Closing a slot does not cancel a reservation. There is no public signup or account-administration UI.
 
-## Booking behavior
+### Test the admin panel locally
 
-- One team calendar with fixed 30-minute appointments. No payment required.
+A free Supabase project works for localhost:
+
+1. In its SQL editor, apply every file in `supabase/migrations/` in filename order.
+2. Fill `apps/web/.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SECRET`, `ADMIN_TOKEN`, `NEXT_PUBLIC_SITE_URL=http://localhost:3000`).
+3. Restart dev, open `/admin`, sign in with the token — no email or Supabase user needed.
+4. Publish a slot 2+ hours ahead; in a private window book it at `/booking`, then cancel via the private management link. Back in `/admin`, try close/reopen, reschedule, and the payment verification queue. Emails only send once Resend/`CONTACT_EMAIL` are set; records and the outbox queue still work without them.
+5. Sign out and confirm `/admin` asks for the token again. Wrong tokens are rejected without hints and repeated guesses are rate-limited.
+
+Browser tests use `/usr/bin/google-chrome`; override `CHROME_PATH` if necessary. They launch the production server, run desktop/mobile coverage, and stop their server afterwards. The booking confirmation browser test explicitly mocks the API; database behavior is tested separately with embedded PostgreSQL. Provider delivery still needs a staging smoke test with your credentials.
+
+### Booking internals
+
+- One team calendar, fixed 30-minute appointments. No payment required to book.
 - Database exclusion constraints reject overlapping availability; a partial unique index and transactional locking prevent double-booking.
 - Idempotent request IDs prevent duplicate records after network retries. Changed payloads under the same ID are rejected.
-- The confirmation screen provides an `.ics` calendar download and a private management link. The token is kept in the URL fragment, not the query string, and only its hash is stored in the database.
-- Visitors can view/cancel through the private link and book another slot. Admins can reschedule directly.
-- No automatic video meeting creation or external Google/Outlook calendar conflict detection is included. The team supplies meeting details separately and should publish only genuinely available slots.
-- Availability lists the next 200 upcoming slots by default and pages forward with `GET /api/availability?after=<starts_at>&limit=<1–200>`. Admin views page 50 records at a time with keyset cursors (`sAfter`/`bAfter`/`aAfter`/`pAfter`); use “Show more” links rather than treating one page as a complete archive.
+- Availability lists the next 200 upcoming slots by default and pages forward with `GET /api/availability?after=<starts_at>&limit=<1–200>`. Admin views page 50 records at a time with keyset cursors (`sAfter`/`bAfter`/`aAfter`/`pAfter`); never treat one page as a complete archive.
 
-## Payments (manual mobile banking)
+### Manual payments internals
 
-The `/pricing` page lists engagement models and personal receiving accounts for
-bKash, Nagad, Rocket, bank, or other methods. There is no gateway integration and no
-automatic charge capture. The team manages methods from the admin panel: label, account
-name/number, payer instructions, visibility, and sort order.
+- No gateway integration and no automatic charge capture. The team manages methods from the admin panel: label, account name/number, payer instructions, visibility, and sort order.
+- QR artwork must be committed under `apps/web/public/qr/` and referenced as `/qr/….png` (content security only allows same-origin and data-URI images), or pasted as a `data:image/…;base64,…` URI. Account numbers are shown to payers by design.
+- `POST /api/payments` validates, rate-limits, and records TrxIDs idempotently via `submit_manual_payment`, which also queues a `payment` notification. The worker emails the TrxID to `CONTACT_EMAIL` via Resend; without those vars the notice retries. Decisions (`pending → verified/rejected`) are final; duplicate TrxIDs per method are rejected.
+- Engagement prices live in `src/lib/pricing.ts` — confirm them before launch. No result is ever guaranteed; payment alone establishes no ROI.
 
-- QR artwork must be committed under `apps/web/public/qr/` and referenced as `/qr/….png`
-  (content security only allows same-origin and data-URI images), or pasted as a
-  `data:image/…;base64,…` URI. Account numbers are shown to payers by design.
-- Visitors pay in their own app, then submit the transaction ID through the pricing form.
-  `POST /api/payments` validates, rate-limits, and records it idempotently via
-  `submit_manual_payment`, which also queues a `payment` notification.
-- The worker emails the TrxID to `CONTACT_EMAIL` via Resend (`BOOKING_FROM_EMAIL` sender);
-  without those vars the notice retries. The team verifies each TrxID by hand in the
-  admin panel (`pending → verified/rejected`); a saved decision is final and duplicate
-  TrxIDs per method are rejected.
-- Engagement prices live in `src/lib/pricing.ts` — confirm them before launch. No result
-  is ever guaranteed; payment alone establishes no ROI.
+### Notifications and audit webhooks
 
-## Notifications and audit webhooks
-
-Saving a lead or booking and inserting its notification happen in one database transaction. Notifications are delivered by an authenticated worker endpoint, not by a browser request.
+Saving a lead, booking, or payment and inserting its notification happen in one database transaction. Notifications are delivered by an authenticated worker endpoint, not by a browser request.
 
 Set `CRON_SECRET` to a separate random string of at least 32 characters. Schedule a POST to `/api/internal/notifications` every minute with `Authorization: Bearer <CRON_SECRET>` using a scheduler with secure header storage. Do not place this secret in a public URL. The endpoint claims batches with `SKIP LOCKED` and a lease, retries with backoff, and stops after eight attempts. The admin dashboard displays queue counts. Delivery is at least once; generic receivers should deduplicate `X-OmniScale-Event-Id`.
 
@@ -104,7 +154,7 @@ Audit notifications support:
 - `slack`: use a Slack incoming webhook URL. The adapter sends plain text and disables link expansion.
 - `discord`: use a Discord incoming webhook URL. Mentions are disabled.
 
-For booking confirmation/update emails, set `RESEND_API_KEY` and `BOOKING_FROM_EMAIL` with a verified sender. Messages include appointment time, status, and the private management link. Configure provider retention and access appropriately. No notifications have been sent as part of local development.
+For booking confirmation/update emails and payment-verification notices, set `RESEND_API_KEY`, `BOOKING_FROM_EMAIL` (verified sender), and `CONTACT_EMAIL` (team inbox for payment notices). Configure provider retention and access appropriately. No notifications have been sent as part of local development.
 
 If delivery credentials were missing and all retries were exhausted, fix configuration, then reset only the failed messages you intend to resend:
 
@@ -116,7 +166,7 @@ where delivered_at is null and attempts >= 8;
 
 Monitor the queue and provider delivery logs. Booking records remain authoritative even when notification delivery fails. A scheduled request timeout after a successful webhook may cause a retry; Slack and Discord may display a duplicate notification.
 
-## Calculator model
+### Calculator model
 
 The four headline inputs are AOV, monthly ad spend, conversion rate, and hook rate. Expand assumptions for CPM, CTR, new customer share, lifetime order frequency, gross margin, total business revenue, total marketing spend, and relative improvements.
 
@@ -131,24 +181,24 @@ The four headline inputs are AOV, monthly ad spend, conversion rate, and hook ra
 
 The formula disclosure on `/calculator` details assumptions and exclusions. Inputs never leave the browser. No numeric results are represented as guarantees or verified client evidence.
 
-## Currency and location
+### Currency and location
 
 Preference order: manually saved USD/EUR/BDT selection → trusted Vercel country header → browser timezone suggestion → USD. Other hosts use the timezone fallback unless a trusted regional adapter is added. No geolocation permission, third-party IP lookup, or precise tracking is required. Manual choice is saved in local storage. Switching currency starts a new illustrative calculator example; it does **not** perform FX conversion. Historic case-study metrics are percentages and are not relabeled as converted revenue.
 
-## Portfolio and trust
+### Trust and evidence
 
 `src/lib/blueprints.ts` contains original illustrative concepts with test targets. No fabricated clients, testimonials, or verified ROI badges are shown. The typed testimonial collection supports E-commerce and B2B SaaS filtering once approved material with a source URL and approval date is supplied.
 
 An optional internal Stripe evidence endpoint (`POST /api/internal/stripe-proof`, same bearer authentication as the worker) verifies explicitly approved live charge IDs from `STRIPE_PROOF_CHARGE_IDS` using `STRIPE_SECRET_KEY`. It returns collected amounts less recorded refunds, grouped by currency in Stripe minor units. It never publishes financial information automatically. Payment evidence alone does not establish advertising attribution, profit, or ROI; public case studies require a separate approved evidence package. See [Stripe’s charge retrieval API](https://docs.stripe.com/api/charges/retrieve).
 
-## Production configuration and checks
+### Production checklist
 
-Deploy the standard Next.js app on a Node-compatible host. From this npm-workspace root, build with `npm run build` and start with `npm run start`. For a remote server, set an externally reachable listen hostname through the host’s launch command rather than the local-only default. The selected Next.js runtime is retained; this repository does not substitute a different framework for hosting.
+Deploy the standard Next.js app on a Node-compatible host (or Vercel with Root Directory `apps/web`). From this npm-workspace root, build with `npm run build` and start with `npm run start`. The selected Next.js runtime is retained; this repository does not substitute a different framework for hosting.
 
 Before accepting real visitors:
 
-1. Apply the database migration; configure secrets, origin, `CONTACT_EMAIL`, admin users, and a backup policy.
-2. Configure the scheduler and any notification providers. Test real lead persistence, booking, cancellation, rescheduling, and email/webhook delivery against staging.
+1. Apply all database migrations; configure secrets, origin, `CONTACT_EMAIL`, and a backup policy.
+2. Configure the scheduler and any notification providers. Test real lead persistence, booking, cancellation, rescheduling, payment verification, and email/webhook delivery against staging.
 3. Publish initial slots. Verify admin token login, logout, session expiry, and rejection of wrong tokens.
 4. Set a documented data-retention policy and privacy contact. The included privacy notice describes actual implemented behavior; no automatic deletion policy is enabled.
 5. If your hosting proxy guarantees an overwritten client-IP header, set `TRUSTED_IP_HEADER` to that header. Otherwise leave it empty. Email and global database limits still apply. Add host-level bot/rate controls appropriate to campaign volume.
@@ -157,7 +207,7 @@ Before accepting real visitors:
 
 The app uses CSP, origin validation, bounded JSON bodies, schema validation, a honeypot, shared database limits, server-only secrets, authorization checks, and RLS. These controls do not substitute for a deployment review and monitoring. Production dependencies currently pass the npm advisory check; development lint tooling has a transitive `braces` advisory with no compatible upstream fix. Do not apply `npm audit fix --force`, which proposes downgrading the Next lint configuration across major versions.
 
-## Directory layout
+### Directory layout
 
 ```text
 apps/web/
