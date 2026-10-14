@@ -45,11 +45,35 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 ```
 
-## Flow
+## Launch checklist (complete MVP = all boxes ticked)
 
-- Push to `main` → GitHub Actions runs `lint → typecheck → test → build` →
-  Vercel auto-deploys on green. PRs get preview deployments.
-- Browser tests (`npm run test:e2e`) stay local: they need Chrome and a production
-  build (`npm run build && npm run test:e2e`).
-- After deploy: smoke-test audit submit, booking/cancel/reschedule, admin login,
-  and one notification delivery against staging before pointing the domain at it.
+Push to `main` → GitHub Actions runs `lint → typecheck → test → build` →
+Vercel auto-deploys on green. PRs get preview deployments (set the same env vars
+on Preview, with a preview `NEXT_PUBLIC_SITE_URL`).
+
+- [ ] **Repo + project.** Remote added, `main` pushed, Vercel project imported
+      (Root Directory `apps/web`), CI green on the push.
+- [ ] **Database.** All three migrations applied **in filename order** to staging
+      (`001_omniscale` → `002_pagination` → `003_payments`); verify tables
+      `slots/bookings/audit_submissions/outbox/payment_methods/manual_payments` exist.
+- [ ] **Secrets.** All `apps/web/.env.example` vars set in Vercel (Production).
+      `ADMIN_TOKEN` / `RATE_LIMIT_SECRET` / `CRON_SECRET` each `openssl rand -hex 32`.
+      `RATE_LIMIT_SECRET` must stay stable across deploys (booking links derive from it).
+- [ ] **Staging smoke (do not skip).** Sign in at `/admin` with `ADMIN_TOKEN`; publish a
+      slot; in a private window submit an audit, book, cancel via the manage link;
+      reschedule from admin; submit a TrxID on `/pricing` and verify it. Fire two
+      bookings at the same slot from independent sessions to prove the race guard.
+- [ ] **Notifications.** Scheduler live (cron snippet above or external), one real audit
+      webhook + one booking email + one payment notice delivered; confirm retries settle
+      and dead-lettered rows are visible in the admin counts.
+- [ ] **Commercial ready.** Pricing figures confirmed (no placeholders), real payment
+      methods + QR published, initial availability published.
+- [ ] **Domain.** DNS → Vercel, `NEXT_PUBLIC_SITE_URL` = exact public origin, then
+      **redeploy** — `NEXT_PUBLIC_*` values bake into the build, editing the var alone
+      changes nothing until the next deployment. Re-verify sitemap/robots/canonical/OG
+      and noindex on `/admin` + manage pages.
+- [ ] **Policy.** Privacy contact published, retention rule decided, Supabase backup
+      enabled with a restore drill noted.
+
+Browser tests (`npm run test:e2e`) stay local: they need Chrome and a production
+build (`npm run build && npm run test:e2e`). Re-run them after any pre-launch change.

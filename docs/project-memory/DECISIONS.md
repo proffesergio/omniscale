@@ -29,7 +29,7 @@ Decision dates reflect the conversation available on 2026-10-14. User choices ou
 - npm workspace with the application under `apps/web`.
 - Warm off-white, charcoal, sage and orange visual direction.
 - Manual currency preference stored locally; location suggestion falls back to timezone; changing calculator currency starts a separate example rather than claiming an exchange conversion.
-- Server-only database secrets; Supabase auth helper and admin allowlist table.
+- Server-only database secrets; token-sealed admin sessions; `admins` allowlist retained in schema but unused (D19).
 - Atomic reservation SQL and durable notification outbox.
 - Blueprint targets remain illustrative; testimonial data remains empty until approved evidence is supplied.
 
@@ -39,13 +39,14 @@ These are implementation choices, not claims of verified operation or independen
 
 - Calendly is superseded. Do not add it back without a new user decision.
 - Tailwind v4 uses CSS-first configuration in the current scaffold. The original directory sketch's `tailwind.config.ts` is not itself proof of a missing feature.
-- A local repository is present. No hosting decision or completed deployment is established by this checkpoint.
+- A git repo on `main` (HEAD `120b15d`) with CI exists. No remote, no hosting account, no completed deployment is established by this checkpoint.
 - No new MCP connection or skill installation is authorized merely by its inclusion in TOOLS.md.
 
 ## Implementation checkpoint — 2026-10-15
 
-- The local Next.js implementation now includes the visitor routes, owned scheduling, calendar export, admin actions, notification worker, and private Stripe evidence adapter.
+- The local Next.js implementation now includes the visitor routes, owned scheduling, calendar export, admin actions, notification worker, manual BD payments with a TrxID verification queue, and private Stripe evidence adapter.
 - Booking uses one calendar and fixed 30-minute slots, published 2 hours to 90 days ahead. No video link creation or external calendar synchronization is implied.
-- Supabase, notification providers, privacy contact, and a hosting target still require configuration. No deployment occurred.
+- Admin auth is token-only (`ADMIN_TOKEN`, sealed 12h cookie). Supabase, notification providers, privacy contact, pricing confirmation, and a hosting target still require configuration. No deployment occurred.
 - Standard Next.js was retained to honor the selected architecture. The Sites skill was consulted for presentation and preview guidance; no hosted Site was created.
 - Live API success is not inferred from mocked browser responses or embedded database tests. Preserve these verification limits in future handoffs.
+- Pending work moved to `BACKLOG.md`: P0 launch blockers B01–B06 (remote, staging, pricing/QR confirmation, scheduler/providers, domain, policy), accepted post-MVP features B07–B10 (D11–D14), hardening B11–B18.
