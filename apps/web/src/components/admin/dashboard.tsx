@@ -4,8 +4,9 @@ import { useActionState, useState } from 'react';
 import { useBrowserTimezone } from '@/hooks/use-browser-timezone';
 import { adminMutation, login, logout, type AdminState } from '@/app/admin/actions';
 import { Button } from '@/components/ui/button';
-import type { Booking, Slot } from '@/types';
+import type { Booking, ManualPayment, PaymentMethod, Slot } from '@/types';
 import type { AuditInput } from '@/lib/validators';
+import { paymentProviders } from '@/lib/validators';
 export function AdminLogin({ configured }: { configured: boolean }) {
   const [state, action, pending] = useActionState(login, {} as AdminState);
   return (
@@ -53,6 +54,9 @@ export function AdminDashboard({
   cursors,
   next,
   pageSize,
+  methods,
+  payments,
+  paymentStatus,
 }: {
   email: string;
   slots: (Slot & { is_open: boolean })[];
@@ -60,9 +64,17 @@ export function AdminDashboard({
   audits: { id: string; payload: AuditInput; created_at: string }[];
   pendingNotifications: number;
   failedNotifications: number;
-  cursors: { bAfter?: string; aAfter?: string; sAfter?: string };
-  next: { slots: string | null; bookings: string | null; audits: string | null };
+  cursors: { bAfter?: string; aAfter?: string; sAfter?: string; pAfter?: string };
+  next: {
+    slots: string | null;
+    bookings: string | null;
+    audits: string | null;
+    payments: string | null;
+  };
   pageSize: number;
+  methods: PaymentMethod[];
+  payments: ManualPayment[];
+  paymentStatus: 'pending' | 'all';
 }) {
   const [state, action, pending] = useActionState(adminMutation, {} as AdminState);
   const timezone = useBrowserTimezone();
@@ -76,14 +88,25 @@ export function AdminDashboard({
   const available = slots.filter(
     (s) => s.is_open && !bookings.some((b) => b.slot_id === s.id && b.status !== 'cancelled'),
   );
-  const pageHref = (key: 'sAfter' | 'bAfter' | 'aAfter', cursor: string) => {
+  const pageHref = (key: 'sAfter' | 'bAfter' | 'aAfter' | 'pAfter', cursor: string) => {
     const params = new URLSearchParams();
     if (cursors.sAfter) params.set('sAfter', cursors.sAfter);
     if (cursors.bAfter) params.set('bAfter', cursors.bAfter);
     if (cursors.aAfter) params.set('aAfter', cursors.aAfter);
+    if (cursors.pAfter) params.set('pAfter', cursors.pAfter);
+    params.set('pStatus', paymentStatus);
     params.set(key, cursor);
     return `/admin?${params.toString()}`;
   };
+  const paymentFilterHref = (status: 'pending' | 'all') => {
+    const params = new URLSearchParams();
+    if (cursors.sAfter) params.set('sAfter', cursors.sAfter);
+    if (cursors.bAfter) params.set('bAfter', cursors.bAfter);
+    if (cursors.aAfter) params.set('aAfter', cursors.aAfter);
+    params.set('pStatus', status);
+    return `/admin?${params.toString()}`;
+  };
+  const methodName = (id: string) => methods.find((m) => m.id === id)?.label ?? 'Unknown method';
   return (
     <div className="admin-layout">
       <div className="admin-toolbar">
@@ -255,6 +278,183 @@ export function AdminDashboard({
           <p style={{ marginTop: 12 }}>
             <Link className="text-link" href={pageHref('aAfter', next.audits)}>
               Show older requests →
+            </Link>
+          </p>
+        )}
+      </section>
+      <section className="admin-panel" style={{ marginTop: 25 }}>
+        <h3>Payment methods</h3>
+        <p>
+          Personal receiving accounts and QR artwork shown on the pricing page. QR images must
+          live under <code>/qr/</code> in the site (commit scans to{' '}
+          <code>apps/web/public/qr/</code>) or be pasted as data URIs. Account numbers are shown
+          to payers by design.
+        </p>
+        {methods.length === 0 && <p>No payment methods yet. Add your bKash number below.</p>}
+        {methods.map((m) => (
+          <form action={action} className="admin-booking" key={m.id}>
+            <input type="hidden" name="operation" value="update-method" />
+            <input type="hidden" name="id" value={m.id} />
+            <h4>
+              {m.label} · {m.is_active ? 'Active' : 'Hidden'}
+            </h4>
+            <div className="form-grid">
+              <label className="field">
+                <span>Provider</span>
+                <select name="provider" defaultValue={m.provider}>
+                  {paymentProviders.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Display label</span>
+                <input name="label" defaultValue={m.label} required minLength={2} maxLength={80} />
+              </label>
+            </div>
+            <div className="form-grid">
+              <label className="field">
+                <span>Account name</span>
+                <input name="account_name" defaultValue={m.account_name} maxLength={100} />
+              </label>
+              <label className="field">
+                <span>Account number</span>
+                <input name="account_number" defaultValue={m.account_number} required maxLength={60} />
+              </label>
+            </div>
+            <label className="field" style={{ marginTop: 12 }}>
+              <span>QR image (/qr/… path or data URI, optional)</span>
+              <input name="qr_image_url" defaultValue={m.qr_image_url} maxLength={2000} />
+            </label>
+            <label className="field" style={{ marginTop: 12 }}>
+              <span>Instructions for payers</span>
+              <textarea name="instructions" defaultValue={m.instructions} maxLength={1000} />
+            </label>
+            <div className="form-grid" style={{ marginTop: 12 }}>
+              <label className="field">
+                <span>Visibility</span>
+                <select name="is_active" defaultValue={String(m.is_active)}>
+                  <option value="true">Active</option>
+                  <option value="false">Hidden</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Sort order</span>
+                <input
+                  name="sort_order"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  defaultValue={m.sort_order}
+                />
+              </label>
+            </div>
+            <p style={{ marginTop: 12 }}>
+              <Button disabled={pending}>Save method</Button>
+            </p>
+          </form>
+        ))}
+        <h3 style={{ marginTop: 30 }}>Add a payment method</h3>
+        <form action={action} className="admin-booking">
+          <input type="hidden" name="operation" value="create-method" />
+          <div className="form-grid">
+            <label className="field">
+              <span>Provider</span>
+              <select name="provider" defaultValue="bkash">
+                {paymentProviders.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Display label</span>
+              <input name="label" required minLength={2} maxLength={80} placeholder="bKash Personal" />
+            </label>
+          </div>
+          <div className="form-grid">
+            <label className="field">
+              <span>Account name</span>
+              <input name="account_name" maxLength={100} placeholder="Account holder name" />
+            </label>
+            <label className="field">
+              <span>Account number</span>
+              <input name="account_number" required maxLength={60} placeholder="01XXXXXXXXX" />
+            </label>
+          </div>
+          <label className="field" style={{ marginTop: 12 }}>
+            <span>QR image (/qr/… path or data URI, optional)</span>
+            <input name="qr_image_url" maxLength={2000} placeholder="/qr/bkash.png" />
+          </label>
+          <label className="field" style={{ marginTop: 12 }}>
+            <span>Instructions for payers</span>
+            <textarea
+              name="instructions"
+              maxLength={1000}
+              placeholder="Send Money to the number above, then submit the TrxID below."
+            />
+          </label>
+          <input type="hidden" name="is_active" value="true" />
+          <input type="hidden" name="sort_order" value={methods.length} />
+          <p style={{ marginTop: 12 }}>
+            <Button disabled={pending}>Add method</Button>
+          </p>
+        </form>
+      </section>
+      <section className="admin-panel" style={{ marginTop: 25 }}>
+        <h3>Payment verification</h3>
+        <p>
+          <Link
+            className="text-link"
+            href={paymentFilterHref('pending')}
+            aria-current={paymentStatus === 'pending' ? 'page' : undefined}
+          >
+            Pending
+          </Link>{' '}
+          ·{' '}
+          <Link
+            className="text-link"
+            href={paymentFilterHref('all')}
+            aria-current={paymentStatus === 'all' ? 'page' : undefined}
+          >
+            All decided
+          </Link>
+        </p>
+        {payments.length === 0 && <p>No {paymentStatus === 'pending' ? 'pending' : ''} payments.</p>}
+        {payments.map((p) => (
+          <article className="admin-booking" key={p.id}>
+            <h4>
+              {p.trxid} · {p.status}
+            </h4>
+            <p>
+              {methodName(p.method_id)} · {p.plan} · {p.amount_text}
+              <br />
+              {p.payer_name} · <a href={`mailto:${p.payer_email}`}>{p.payer_email}</a> · Sender:{' '}
+              {p.sender_number}
+              <br />
+              Submitted {format(p.created_at)}
+            </p>
+            {p.note && <p>Note: {p.note}</p>}
+            {p.status === 'pending' && (
+              <form action={action}>
+                <input type="hidden" name="operation" value="verify-payment" />
+                <input type="hidden" name="id" value={p.id} />
+                <select name="status" defaultValue="verified" aria-label={`Decision for ${p.trxid}`}>
+                  <option value="verified">Verified</option>
+                  <option value="rejected">Rejected</option>
+                </select>{' '}
+                <Button disabled={pending}>Save decision</Button>
+              </form>
+            )}
+          </article>
+        ))}
+        {next.payments && (
+          <p style={{ marginTop: 12 }}>
+            <Link className="text-link" href={pageHref('pAfter', next.payments)}>
+              Show older payments →
             </Link>
           </p>
         )}

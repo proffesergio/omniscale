@@ -17,6 +17,7 @@ export function SiteFooter() {
           <div className="footer-links">
             <Link href="/calculator">Funnel calculator</Link>
             <Link href="/case-studies">Creative blueprints</Link>
+            <Link href="/pricing">Pricing</Link>
             <Link href="/audit">Request an audit</Link>
             <Link href="/booking">
               Book a discovery call <ArrowUpRight size={14} />

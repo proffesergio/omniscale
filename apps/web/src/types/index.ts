@@ -65,6 +65,30 @@ export interface Booking {
   created_at: string;
   slots: Slot;
 }
+export interface PaymentMethod {
+  id: string;
+  provider: 'bkash' | 'nagad' | 'rocket' | 'bank' | 'card' | 'other';
+  label: string;
+  account_name: string;
+  account_number: string;
+  qr_image_url: string;
+  instructions: string;
+  is_active: boolean;
+  sort_order: number;
+}
+export interface ManualPayment {
+  id: string;
+  method_id: string;
+  plan: string;
+  amount_text: string;
+  sender_number: string;
+  trxid: string;
+  payer_name: string;
+  payer_email: string;
+  note: string;
+  status: 'pending' | 'verified' | 'rejected';
+  created_at: string;
+}
 export interface Testimonial {
   id: string;
   quote: string;

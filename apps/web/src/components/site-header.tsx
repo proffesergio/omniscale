@@ -21,6 +21,7 @@ export function SiteHeader() {
             ['/#approach', 'Our approach'],
             ['/case-studies', 'Creative lab'],
             ['/calculator', 'ROI calculator'],
+            ['/pricing', 'Pricing'],
           ].map(([href, label]) => (
             <Link
               key={href}

@@ -63,3 +63,40 @@ export const bookingSchema = z.object({
   requestId: z.uuid(),
 });
 export type BookingInput = z.infer<typeof bookingSchema>;
+export const paymentProviders = ['bkash', 'nagad', 'rocket', 'bank', 'card', 'other'] as const;
+const qrImage = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine(
+    (value) =>
+      value === '' ||
+      value.startsWith('/qr/') ||
+      (value.startsWith('data:image/') && value.includes(';base64,')),
+    'Use a /qr/ image path from the site or a data:image base64 URI.',
+  );
+export const paymentMethodSchema = z.object({
+  provider: z.enum(paymentProviders),
+  label: z.string().trim().min(2).max(80),
+  accountName: z.string().trim().max(100),
+  accountNumber: z.string().trim().min(3).max(60),
+  qrImageUrl: qrImage,
+  instructions: z.string().trim().max(1000),
+  isActive: z.boolean(),
+  sortOrder: z.coerce.number().int().min(0).max(1000),
+});
+export type PaymentMethodInput = z.infer<typeof paymentMethodSchema>;
+export const manualPaymentSchema = z.object({
+  methodId: z.uuid(),
+  plan: z.string().trim().min(2).max(80),
+  amountText: z.string().trim().min(1).max(40),
+  senderNumber: z.string().trim().min(6).max(20),
+  trxid: z.string().trim().min(4).max(60),
+  payerName: z.string().trim().min(2).max(100),
+  payerEmail: z.email().max(254).toLowerCase(),
+  note: z.string().trim().max(500),
+  consent: z.boolean().refine(Boolean, 'Please accept the privacy notice.'),
+  company: z.string().max(0),
+  requestId: z.uuid(),
+});
+export type ManualPaymentInput = z.infer<typeof manualPaymentSchema>;

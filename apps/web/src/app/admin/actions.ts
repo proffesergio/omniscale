@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { authClient, databaseConfigured, db, getAdmin } from '@/lib/supabase';
+import { paymentMethodSchema } from '@/lib/validators';
 import { rateLimit, HttpError } from '@/lib/security';
 export type AdminState = { error?: string; message?: string };
 export async function login(_previous: AdminState, form: FormData): Promise<AdminState> {
@@ -71,8 +72,7 @@ export async function adminMutation(_previous: AdminState, form: FormData): Prom
         .update({ is_open: form.get('is_open') === 'true' })
         .eq('id', id.data);
       if (error) return { error: 'Availability could not be updated.' };
-    } else if (operation === 'update-booking') {
-      const parsed = z
+    } else if (operation === 'update-booking') {      const parsed = z
         .object({
           id: z.uuid(),
           status: z.enum(['confirmed', 'cancelled', 'completed']),
@@ -97,6 +97,54 @@ export async function adminMutation(_previous: AdminState, form: FormData): Prom
               ? 'A past appointment cannot be reconfirmed.'
               : 'Update failed. The selected time may no longer be available.',
         };
+    } else if (operation === 'create-method' || operation === 'update-method') {
+      const parsed = paymentMethodSchema.safeParse({
+        provider: form.get('provider'),
+        label: form.get('label'),
+        accountName: form.get('account_name') || '',
+        accountNumber: form.get('account_number'),
+        qrImageUrl: form.get('qr_image_url') || '',
+        instructions: form.get('instructions') || '',
+        isActive: form.get('is_active') === 'true',
+        sortOrder: form.get('sort_order') || 0,
+      });
+      if (!parsed.success) return { error: 'Check the payment method fields and try again.' };
+      const row = {
+        provider: parsed.data.provider,
+        label: parsed.data.label,
+        account_name: parsed.data.accountName,
+        account_number: parsed.data.accountNumber,
+        qr_image_url: parsed.data.qrImageUrl,
+        instructions: parsed.data.instructions,
+        is_active: parsed.data.isActive,
+        sort_order: parsed.data.sortOrder,
+      };
+      if (operation === 'create-method') {
+        const { error } = await db().from('payment_methods').insert(row);
+        if (error) return { error: 'The payment method could not be saved.' };
+      } else {
+        const id = z.uuid().safeParse(form.get('id'));
+        if (!id.success) return { error: 'Invalid payment method.' };
+        const { error } = await db().from('payment_methods').update(row).eq('id', id.data);
+        if (error) return { error: 'The payment method could not be saved.' };
+      }
+    } else if (operation === 'verify-payment') {
+      const parsed = z
+        .object({ id: z.uuid(), status: z.enum(['verified', 'rejected']) })
+        .safeParse({ id: form.get('id'), status: form.get('status') });
+      if (!parsed.success) return { error: 'Choose a valid payment decision.' };
+      const { data: current } = await db()
+        .from('manual_payments')
+        .select('id,status')
+        .eq('id', parsed.data.id)
+        .maybeSingle();
+      if (!current) return { error: 'Payment not found.' };
+      if (current.status !== 'pending') return { error: 'That payment was already decided.' };
+      const { error } = await db()
+        .from('manual_payments')
+        .update({ status: parsed.data.status })
+        .eq('id', parsed.data.id);
+      if (error) return { error: 'The payment decision could not be saved.' };
     } else {
       return { error: 'Unknown admin action.' };
     }

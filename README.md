@@ -26,7 +26,7 @@ Browser tests use `/usr/bin/google-chrome`; override `CHROME_PATH` if necessary.
 
 ## Connect Supabase
 
-1. Create a Supabase project. Apply `supabase/migrations/001_omniscale.sql` once using the SQL editor or your migration tooling. It creates lead records, availability, bookings, an admin allowlist, shared rate limits, and a notification outbox with RLS enabled.
+1. Create a Supabase project. Apply every file in `supabase/migrations/` in filename order once using the SQL editor or your migration tooling. It creates lead records, availability, bookings, an admin allowlist, shared rate limits, and a notification outbox with RLS enabled.
 2. Copy `apps/web/.env.example` to `apps/web/.env.local` and populate `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY`. A legacy service-role key can be used as the server key if required by an older project. Never prefix the server key with `NEXT_PUBLIC_`.
 3. Set a separate random `RATE_LIMIT_SECRET` of at least 32 characters. Use `openssl rand -hex 32`. Keep it stable: booking management links are derived from it. Rotating it invalidates regeneration of existing links and requires a planned migration.
 4. Set `NEXT_PUBLIC_SITE_URL` to the exact browser origin, including scheme and port. Local development accepts localhost and 127.0.0.1 on port 3000. Production requires the configured origin. Use HTTPS on the public deployment.
@@ -50,6 +50,26 @@ The server revalidates the authenticated user and admin membership before every 
 - Visitors can view/cancel through the private link and book another slot. Admins can reschedule directly.
 - No automatic video meeting creation or external Google/Outlook calendar conflict detection is included. The team supplies meeting details separately and should publish only genuinely available slots.
 - Availability lists the next 200 upcoming slots by default and pages forward with `GET /api/availability?after=<starts_at>&limit=<1–200>`. Admin views page 50 records at a time with keyset cursors (`sAfter`, `bAfter`, `aAfter`); use “Show more” links rather than treating one page as a complete archive.
+
+## Payments (manual mobile banking)
+
+The `/pricing` page lists engagement models and personal receiving accounts for
+bKash, Nagad, Rocket, bank, or other methods. There is no gateway integration and no
+automatic charge capture. The team manages methods from the admin panel: label, account
+name/number, payer instructions, visibility, and sort order.
+
+- QR artwork must be committed under `apps/web/public/qr/` and referenced as `/qr/….png`
+  (content security only allows same-origin and data-URI images), or pasted as a
+  `data:image/…;base64,…` URI. Account numbers are shown to payers by design.
+- Visitors pay in their own app, then submit the transaction ID through the pricing form.
+  `POST /api/payments` validates, rate-limits, and records it idempotently via
+  `submit_manual_payment`, which also queues a `payment` notification.
+- The worker emails the TrxID to `CONTACT_EMAIL` via Resend (`BOOKING_FROM_EMAIL` sender);
+  without those vars the notice retries. The team verifies each TrxID by hand in the
+  admin panel (`pending → verified/rejected`); a saved decision is final and duplicate
+  TrxIDs per method are rejected.
+- Engagement prices live in `src/lib/pricing.ts` — confirm them before launch. No result
+  is ever guaranteed; payment alone establishes no ROI.
 
 ## Notifications and audit webhooks
 

@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/case-studies',
     '/audit',
     '/booking',
+    '/pricing',
     '/privacy',
     ...blueprints.map((b) => `/case-studies/${b.slug}`),
   ].map((path) => ({

@@ -127,6 +127,13 @@ test('booking UX handles timezone selection and returns a private management lin
     `http://127.0.0.1:3000/booking/manage#${'a'.repeat(64)}`,
   );
 });
+test('pricing explains payments are opening soon without credentials', async ({ page }) => {
+  await page.goto('/pricing');
+  await expect(page.getByRole('heading', { name: 'Clear scopes. Honest economics.' })).toBeVisible();
+  await expect(
+    page.getByText('Online payments are opening soon.', { exact: false }),
+  ).toBeVisible();
+});
 test('API rejects foreign origins and unauthenticated worker calls', async ({ request }) => {
   const audit = await request.post('/api/audit', {
     headers: { origin: 'https://attacker.example' },

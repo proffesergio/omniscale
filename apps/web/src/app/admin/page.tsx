@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import { AdminDashboard, AdminLogin } from '@/components/admin/dashboard';
 import { databaseConfigured, db, getAdmin } from '@/lib/supabase';
 import { ADMIN_PAGE_SIZE, decodeCursor, encodeCursor } from '@/lib/pagination';
-import type { Booking, Slot } from '@/types';
+import type { Booking, ManualPayment, PaymentMethod, Slot } from '@/types';
 import type { AuditInput } from '@/lib/validators';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Team operations',
   robots: { index: false, follow: false },
 };
-type Cursors = { bAfter?: string; aAfter?: string; sAfter?: string };
+type Cursors = { bAfter?: string; aAfter?: string; sAfter?: string; pAfter?: string };
 export default async function AdminPage({
   searchParams,
 }: {
@@ -42,10 +42,13 @@ export default async function AdminPage({
     bAfter: first(params.bAfter),
     aAfter: first(params.aAfter),
     sAfter: first(params.sAfter),
+    pAfter: first(params.pAfter),
   };
+  const paymentStatus = first(params.pStatus) === 'all' ? 'all' : 'pending';
   const bookingCursor = decodeCursor(cursors.bAfter);
   const auditCursor = decodeCursor(cursors.aAfter);
   const slotCursor = decodeCursor(cursors.sAfter);
+  const paymentCursor = decodeCursor(cursors.pAfter);
   const pagePlusOne = ADMIN_PAGE_SIZE + 1;
   const bookingsQuery = client
     .from('bookings')
@@ -80,7 +83,18 @@ export default async function AdminPage({
     slotsQuery.or(
       `starts_at.gt.${slotCursor.t},and(starts_at.eq.${slotCursor.t},id.gt.${slotCursor.id})`,
     );
-  const [slots, bookings, audits, pending, failed] = await Promise.all([
+  const paymentsQuery = client
+    .from('manual_payments')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(pagePlusOne);
+  if (paymentStatus === 'pending') paymentsQuery.eq('status', 'pending');
+  if (paymentCursor)
+    paymentsQuery.or(
+      `created_at.lt.${paymentCursor.t},and(created_at.eq.${paymentCursor.t},id.lt.${paymentCursor.id})`,
+    );
+  const [slots, bookings, audits, pending, failed, methods, payments] = await Promise.all([
     slotsQuery,
     bookingsQuery,
     auditsQuery,
@@ -94,8 +108,10 @@ export default async function AdminPage({
       .select('id', { count: 'exact', head: true })
       .is('delivered_at', null)
       .gte('attempts', 8),
+    client.from('payment_methods').select('*').order('sort_order').order('created_at'),
+    paymentsQuery,
   ]);
-  if ([slots, bookings, audits, pending, failed].some((r) => r.error))
+  if ([slots, bookings, audits, pending, failed, methods, payments].some((r) => r.error))
     throw new Error('Admin data could not be loaded');
   const slotRows = ((slots.data ?? []) as (Slot & { is_open: boolean })[]).slice(
     0,
@@ -105,6 +121,7 @@ export default async function AdminPage({
   const auditRows = (
     (audits.data ?? []) as { id: string; payload: AuditInput; created_at: string }[]
   ).slice(0, ADMIN_PAGE_SIZE);
+  const paymentRows = ((payments.data ?? []) as ManualPayment[]).slice(0, ADMIN_PAGE_SIZE);
   const next = {
     slots:
       (slots.data?.length ?? 0) > ADMIN_PAGE_SIZE
@@ -124,6 +141,13 @@ export default async function AdminPage({
       (audits.data?.length ?? 0) > ADMIN_PAGE_SIZE
         ? encodeCursor(auditRows[auditRows.length - 1].created_at, auditRows[auditRows.length - 1].id)
         : null,
+    payments:
+      (payments.data?.length ?? 0) > ADMIN_PAGE_SIZE
+        ? encodeCursor(
+            paymentRows[paymentRows.length - 1].created_at,
+            paymentRows[paymentRows.length - 1].id,
+          )
+        : null,
   };
   return (
     <div className="container">
@@ -138,6 +162,9 @@ export default async function AdminPage({
         cursors={cursors}
         next={next}
         pageSize={ADMIN_PAGE_SIZE}
+        methods={(methods.data ?? []) as PaymentMethod[]}
+        payments={paymentRows}
+        paymentStatus={paymentStatus}
       />
     </div>
   );

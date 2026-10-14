@@ -40,7 +40,7 @@ async function reserve(data: ReturnType<typeof booking>, tokenHash = randomUUID(
   );
 }
 
-async function count(table: 'bookings' | 'outbox' | 'audit_submissions', condition = 'true') {
+async function count(table: 'bookings' | 'outbox' | 'audit_submissions' | 'manual_payments', condition = 'true') {
   const result = await db.query<{ count: number }>(
     `select count(*)::integer as count from public.${table} where ${condition}`,
   );
@@ -344,5 +344,63 @@ describe('database migration', () => {
     expect(floored.rows).toHaveLength(1);
     const unpaged = await db.query('select id from public.available_slots()');
     expect(unpaged.rows.length).toBeLessThanOrEqual(200);
+  });
+
+  it('records a manual payment once and queues a team notification', async () => {
+    const methodId = randomUUID();
+    await db.query(
+      `insert into public.payment_methods(id, provider, label, account_number)
+       values ($1, 'bkash', 'bKash Personal', '01XXXXXXXXX')`,
+      [methodId],
+    );
+    const submission = (requestId: string, overrides = {}) => ({
+      requestId,
+      methodId,
+      plan: 'Growth Audit',
+      amountText: 'BDT 15,000 one-time',
+      senderNumber: '01800000000',
+      trxid: 'TRX9X8X7X6',
+      payerName: 'Ada Lovelace',
+      payerEmail: 'ada@example.com',
+      note: '',
+      ...overrides,
+    });
+    const submit = (data: object) =>
+      db.query<{ submit_manual_payment: string }>('select public.submit_manual_payment($1::jsonb)', [
+        JSON.stringify(data),
+      ]);
+    const requestId = randomUUID();
+    const before = await count('outbox');
+    const first = await submit(submission(requestId));
+    expect(first.rows[0].submit_manual_payment).toBe(requestId);
+    const retry = await submit(submission(requestId));
+    expect(retry.rows[0].submit_manual_payment).toBe(requestId);
+    expect(await count('manual_payments', `id = '${requestId}'`)).toBe(1);
+    expect(await count('outbox')).toBe(before + 1);
+    await expect(submit(submission(requestId, { trxid: 'CHANGED' }))).rejects.toThrow(
+      'IDEMPOTENCY_CONFLICT',
+    );
+    await expect(submit(submission(randomUUID()))).rejects.toThrow();
+    await db.query('update public.payment_methods set is_active = false where id = $1::uuid', [
+      methodId,
+    ]);
+    await expect(submit(submission(randomUUID(), { trxid: 'NEWMETHOD' }))).rejects.toThrow(
+      'METHOD_UNAVAILABLE',
+    );
+  });
+
+  it('denies direct public-role access to payment data and submission', async () => {
+    await db.exec('set role anon');
+    try {
+      await expect(db.query('select * from public.manual_payments')).rejects.toThrow();
+      await expect(db.query('select * from public.payment_methods')).rejects.toThrow();
+      await expect(
+        db.query('select public.submit_manual_payment($1::jsonb)', [
+          JSON.stringify({ requestId: randomUUID() }),
+        ]),
+      ).rejects.toThrow();
+    } finally {
+      await db.exec('reset role');
+    }
   });
 });

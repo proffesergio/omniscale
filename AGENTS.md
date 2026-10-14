@@ -25,7 +25,7 @@ npm run test:e2e    # playwright vs production build
 - `NEXT_PUBLIC_SITE_URL` must be the exact origin (scheme + port). `TRUSTED_IP_HEADER` stays empty unless the hosting proxy guarantees it overwrites that header.
 - `RATE_LIMIT_SECRET` (≥32 chars) must stay stable — booking management links derive from it; rotation invalidates regeneration.
 - Admin gore: slots are fixed 30-min, bookable 2h–90 days ahead, stored UTC. Admin lists page 50 at a time via keyset cursors (`sAfter`/`bAfter`/`aAfter`); availability pages via `?after=&limit=` (max 200). Never treat one page as a complete archive. Closing a slot never cancels its booking. Booking records are authoritative even if notification delivery fails (outbox retries to 8 attempts, at-least-once).
-- This repo is not a Git repo; do not init one for workflow purposes. `.env*` (except `.env.example`) is gitignored — never commit secrets or store them in `docs/project-memory/`.
+- Git + CI: `main` branch; push → GitHub Actions (`lint → typecheck → test → build`) → Vercel auto-deploy (Root Directory `apps/web`). E2E stays local (needs Chrome + prod build). See `docs/DEPLOY.md`. `.env*` (except `.env.example`) is gitignored — never commit secrets or store them in `docs/project-memory/`.
 
 ## Supabase setup (staging/prod)
 

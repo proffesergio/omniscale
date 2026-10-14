@@ -80,5 +80,26 @@ export async function deliverNotification(item: Notification) {
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error(`Email delivery returned ${response.status}`);
+  } else if (item.kind === 'payment') {
+    const key = process.env.RESEND_API_KEY;
+    const from = process.env.BOOKING_FROM_EMAIL;
+    const team = process.env.CONTACT_EMAIL;
+    if (!key || !from || !team) throw new Error('Payment notification delivery is not configured');
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': item.id,
+      },
+      body: JSON.stringify({
+        from,
+        to: [team],
+        subject: `OmniScale payment to verify: ${p.trxid}`,
+        text: `A manual payment needs verification.\n\nPlan: ${p.plan}\nAmount: ${p.amountText}\nPayer: ${p.payerName} <${p.payerEmail}>\nSender number: ${p.senderNumber}\nTransaction ID: ${p.trxid}\nNote: ${p.note || '-'}\n\nVerify it in the admin panel. This notice retries until delivery succeeds.`,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Email delivery returned ${response.status}`);
   } else throw new Error('Unknown notification type');
 }
