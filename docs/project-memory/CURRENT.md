@@ -30,6 +30,9 @@ Next milestone: push `main` to GitHub, connect Vercel, provision staging Supabas
 - Git repo initialized on `main` (commits `0aca55e`, `2254d22`); GitHub Actions CI runs
   `lint → typecheck → test → build`; `docs/DEPLOY.md` covers the Vercel flow.
   No remote configured yet — push and Vercel import are the next human steps.
+- Token-only admin auth: shared `ADMIN_TOKEN` (≥32 chars) signs into a sealed 12-hour
+  HTTP-only cookie; no Supabase Auth users, no allowlist lookups. Supabase-user helpers
+  removed; the `public.admins` table stays in schema unused (see D19).
 
 ## Verification ledger
 
@@ -39,7 +42,7 @@ Commands were run from the project root using the `rtk proxy` prefix.
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run lint`            | Passed against final source                                                                                                                 |
 | `npm run typecheck`       | Passed; final `npm run build` also completed TypeScript checks                                                                              |
-| `npm test`                | 45 tests passed across financial, validation, request security, Stripe adapter, pagination, payments, and PostgreSQL suites |
+| `npm test`                | 49 tests passed across financial, validation, request security, Stripe adapter, pagination, payments, admin token auth, and PostgreSQL suites |
 | PostgreSQL suite          | 14 tests passed; all migrations applied to PGlite in filename order              |
 | `npm run build`           | Passed on Next.js 16.4.1; 22 static/generated outputs plus dynamic API/admin routes                                                         |
 | `npm run test:e2e`        | 16 tests passed on desktop and mobile Chrome projects against the production build (incl. new pricing fail-closed test) |

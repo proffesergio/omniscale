@@ -22,6 +22,7 @@ Decision dates reflect the conversation available on 2026-10-14. User choices ou
 | D16 | Git on `main` + GitHub Actions CI + Vercel auto-deploy (Root Dir `apps/web`)  | Accepted 2026-10-15; E2E stays local (Chrome + prod build)                       |
 | D17 | Manual BD mobile-bank payments (bKash/Nagad/Rocket), personal QR managed in admin, TrxID verification queue; no gateway, no auto-capture | Accepted 2026-10-15; QR under `public/qr/` or data URI (CSP), team notified via CONTACT_EMAIL |
 | D18 | Pricing figures in `src/lib/pricing.ts` are owner-unconfirmed placeholders     | Pending owner confirmation before launch; payment alone never implies ROI         |
+| D19 | Token-only admin auth (shared `ADMIN_TOKEN`, sealed 12h cookie) for now        | Accepted 2026-10-15; supersedes Supabase-user + `admins` allowlist until a multi-user decision; allowlist stays in schema unused |
 
 ## Implementation choices to preserve unless evidence warrants revision
 

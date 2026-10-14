@@ -14,6 +14,29 @@ rtk proxy npm run dev
 
 Open http://localhost:3000. The marketing site and calculator work without credentials. Audit submission, booking, and admin access deliberately remain unavailable until the database is configured; the app never pretends a submission was saved.
 
+## Test the admin panel locally
+
+The admin panel needs a real database but no auth provider — one shared token
+(`ADMIN_TOKEN`) signs you in. A free Supabase project works for localhost:
+
+1. Create a free Supabase project. In its SQL editor, apply every file in
+   `supabase/migrations/` in filename order.
+2. Copy `apps/web/.env.example` to `apps/web/.env.local` and set
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   server-only `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SECRET` and `ADMIN_TOKEN`
+   (each secret: `openssl rand -hex 32`), plus
+   `NEXT_PUBLIC_SITE_URL=http://localhost:3000`.
+3. Restart the dev server (`npm run dev`) and open http://localhost:3000/admin.
+   Sign in with the `ADMIN_TOKEN` value — no email or Supabase user needed.
+4. Publish a slot 2+ hours ahead, then in a private window open `/booking`, reserve
+   it, and use the private management link to cancel. Back in `/admin`, try
+   close/reopen, reschedule, and the payment verification queue. Payment and booking
+   emails only send once Resend/`CONTACT_EMAIL` are set; records and the outbox queue
+   still work without them.
+5. Sign out from the toolbar and confirm `/admin` asks for the token again. A wrong
+   token is rejected without saying which part was wrong, and repeated guesses are
+   rate-limited.
+
 ```bash
 rtk proxy npm run lint
 rtk proxy npm run typecheck
@@ -30,16 +53,14 @@ Browser tests use `/usr/bin/google-chrome`; override `CHROME_PATH` if necessary.
 2. Copy `apps/web/.env.example` to `apps/web/.env.local` and populate `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY`. A legacy service-role key can be used as the server key if required by an older project. Never prefix the server key with `NEXT_PUBLIC_`.
 3. Set a separate random `RATE_LIMIT_SECRET` of at least 32 characters. Use `openssl rand -hex 32`. Keep it stable: booking management links are derived from it. Rotating it invalidates regeneration of existing links and requires a planned migration.
 4. Set `NEXT_PUBLIC_SITE_URL` to the exact browser origin, including scheme and port. Local development accepts localhost and 127.0.0.1 on port 3000. Production requires the configured origin. Use HTTPS on the public deployment.
-5. In Supabase Authentication, create a team user with a strong password. Disable public signups in Auth settings. Add that user’s UUID to the allowlist:
+5. Set `ADMIN_TOKEN` to a random string of at least 32 characters (`openssl rand -hex 32`).
+   Open `/admin` and sign in with that token. It creates a 12-hour sealed session cookie;
+   rotating the token signs everyone out. (The `public.admins` allowlist from the migration
+   is unused while token auth is active — no Supabase Auth users are needed.)
 
-```sql
-insert into public.admins (user_id)
-values ('YOUR_AUTH_USER_UUID');
-```
+6. Publish 30-minute slots in your browser’s local timezone. Only slots between two hours and 90 days ahead are bookable. Times are stored in UTC; visitors see their own timezone and can change it.
 
-6. Visit `/admin` and sign in. Publish 30-minute slots in your browser’s local timezone. Only slots between two hours and 90 days ahead are bookable. Times are stored in UTC; visitors see their own timezone and can change it.
-
-The server revalidates the authenticated user and admin membership before every mutation. Public users cannot directly read leads, bookings, tokens, slots, notification payloads, or rate-limit records. Admins can view the pipeline, publish/close availability, cancel bookings, reschedule to an existing slot, and mark completed calls after their end time. Closing a slot does not cancel a reservation. Team accounts are provisioned in Supabase; this application has no public signup or account-administration UI.
+The server revalidates the sealed admin session before every mutation. Public users cannot directly read leads, bookings, tokens, slots, notification payloads, or rate-limit records. Admins can view the pipeline, publish/close availability, cancel bookings, reschedule to an existing slot, and mark completed calls after their end time. Closing a slot does not cancel a reservation. There is no public signup or account-administration UI.
 
 ## Booking behavior
 
@@ -49,7 +70,7 @@ The server revalidates the authenticated user and admin membership before every 
 - The confirmation screen provides an `.ics` calendar download and a private management link. The token is kept in the URL fragment, not the query string, and only its hash is stored in the database.
 - Visitors can view/cancel through the private link and book another slot. Admins can reschedule directly.
 - No automatic video meeting creation or external Google/Outlook calendar conflict detection is included. The team supplies meeting details separately and should publish only genuinely available slots.
-- Availability lists the next 200 upcoming slots by default and pages forward with `GET /api/availability?after=<starts_at>&limit=<1–200>`. Admin views page 50 records at a time with keyset cursors (`sAfter`, `bAfter`, `aAfter`); use “Show more” links rather than treating one page as a complete archive.
+- Availability lists the next 200 upcoming slots by default and pages forward with `GET /api/availability?after=<starts_at>&limit=<1–200>`. Admin views page 50 records at a time with keyset cursors (`sAfter`/`bAfter`/`aAfter`/`pAfter`); use “Show more” links rather than treating one page as a complete archive.
 
 ## Payments (manual mobile banking)
 
@@ -128,7 +149,7 @@ Before accepting real visitors:
 
 1. Apply the database migration; configure secrets, origin, `CONTACT_EMAIL`, admin users, and a backup policy.
 2. Configure the scheduler and any notification providers. Test real lead persistence, booking, cancellation, rescheduling, and email/webhook delivery against staging.
-3. Publish initial slots. Verify admin login, logout, expired sessions, and denial for non-admin users.
+3. Publish initial slots. Verify admin token login, logout, session expiry, and rejection of wrong tokens.
 4. Set a documented data-retention policy and privacy contact. The included privacy notice describes actual implemented behavior; no automatic deletion policy is enabled.
 5. If your hosting proxy guarantees an overwritten client-IP header, set `TRUSTED_IP_HEADER` to that header. Otherwise leave it empty. Email and global database limits still apply. Add host-level bot/rate controls appropriate to campaign volume.
 6. Replace localhost metadata with the public origin and verify canonical social images, sitemap, and robots output. Admin and management pages are marked noindex.

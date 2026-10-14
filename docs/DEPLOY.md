@@ -17,8 +17,8 @@ git push -u origin main
    `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SECRET`, `CRON_SECRET`,
    plus providers you use (`AUDIT_WEBHOOK_*`, `RESEND_API_KEY`, `BOOKING_FROM_EMAIL`,
    `CONTACT_EMAIL`, Stripe proof vars). Never commit `.env.local`.
-4. Apply `supabase/migrations/*.sql` **in filename order** to staging/prod,
-   create the auth user, disable public signups, insert the UUID into `public.admins`.
+4. Apply `supabase/migrations/*.sql` **in filename order** to staging/prod and set
+   `ADMIN_TOKEN` — no Supabase Auth users needed for the team panel.
 
 ## Scheduler (notifications worker)
 

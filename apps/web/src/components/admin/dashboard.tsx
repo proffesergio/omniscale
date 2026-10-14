@@ -15,23 +15,13 @@ export function AdminLogin({ configured }: { configured: boolean }) {
       <p>Access appointment controls and incoming growth audits.</p>
       {!configured && (
         <div className="notice">
-          Setup required: connect Supabase, apply the migration, and add your user to the admins
-          table. See the project README.
+          Setup required: connect Supabase, apply the migrations, and set ADMIN_TOKEN. See the
+          project README.
         </div>
       )}
       <label className="field">
-        <span>Team email</span>
-        <input name="email" type="email" autoComplete="username" required />
-      </label>
-      <label className="field">
-        <span>Password</span>
-        <input
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          minLength={8}
-          required
-        />
+        <span>Admin token</span>
+        <input name="token" type="password" autoComplete="current-password" required />
       </label>
       {state.error && (
         <p className="form-error" role="alert">

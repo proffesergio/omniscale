@@ -2,31 +2,32 @@
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { authClient, databaseConfigured, db, getAdmin } from '@/lib/supabase';
+import { databaseConfigured, db } from '@/lib/supabase';
+import {
+  adminTokenConfigured,
+  createAdminSession,
+  destroyAdminSession,
+  getAdminSession,
+  verifyAdminToken,
+} from '@/lib/admin-auth';
 import { paymentMethodSchema } from '@/lib/validators';
 import { rateLimit, HttpError } from '@/lib/security';
 export type AdminState = { error?: string; message?: string };
 export async function login(_previous: AdminState, form: FormData): Promise<AdminState> {
   const parsed = z
-    .object({ email: z.email().max(254), password: z.string().min(8).max(256) })
-    .safeParse({ email: form.get('email'), password: form.get('password') });
-  if (!parsed.success)
-    return { error: 'Enter your team email and password (at least 8 characters).' };
-  if (!databaseConfigured())
+    .object({ token: z.string().min(1).max(256) })
+    .safeParse({ token: form.get('token') });
+  if (!parsed.success) return { error: 'Enter your admin token.' };
+  if (!databaseConfigured() || !adminTokenConfigured())
     return {
       error:
-        'Admin access is not configured. Connect Supabase and provision an admin account first.',
+        'Admin access is not configured. Connect Supabase, apply the migrations, and set ADMIN_TOKEN first.',
     };
   try {
-    await rateLimit(await headers(), parsed.data.email.toLowerCase(), 'admin-login');
-    const client = await authClient();
-    if (!client) return { error: 'Authentication is not configured.' };
-    const { error } = await client.auth.signInWithPassword(parsed.data);
-    if (error) return { error: 'Unable to sign in with these credentials.' };
-    if (!(await getAdmin())) {
-      await client.auth.signOut();
-      return { error: 'This account does not have admin access.' };
-    }
+    await rateLimit(await headers(), 'admin-token', 'admin-login');
+    if (!verifyAdminToken(parsed.data.token))
+      return { error: 'That token is not correct.' };
+    await createAdminSession();
     revalidatePath('/admin');
     return { message: 'Signed in.' };
   } catch (error) {
@@ -36,12 +37,11 @@ export async function login(_previous: AdminState, form: FormData): Promise<Admi
   }
 }
 export async function logout() {
-  const client = await authClient();
-  await client?.auth.signOut();
+  await destroyAdminSession();
   revalidatePath('/admin');
 }
 export async function adminMutation(_previous: AdminState, form: FormData): Promise<AdminState> {
-  if (!(await getAdmin())) return { error: 'Please sign in with an authorized admin account.' };
+  if (!(await getAdminSession())) return { error: 'Please sign in with the admin token.' };
   const operation = form.get('operation');
   try {
     if (operation === 'create-slot') {

@@ -29,7 +29,7 @@ npm run test:e2e    # playwright vs production build
 
 ## Supabase setup (staging/prod)
 
-1. Apply `supabase/migrations/001_omniscale.sql` once. 2. Copy `apps/web/.env.example` → `apps/web/.env.local`; set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, server `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SECRET`, `CRON_SECRET`, origin, providers. 3. Create auth user, disable public signups, insert UUID into `public.admins`. Full checklist in README. An unapplied migration or unconfigured provider is not a working feature — the app fails closed and says so.
+1. Apply `supabase/migrations/*.sql` in order. 2. Copy `apps/web/.env.example` → `apps/web/.env.local`; set Supabase URL/keys, server `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SECRET`, `CRON_SECRET`, `ADMIN_TOKEN` (≥32 chars, random), origin, providers. 3. Sign in at `/admin` with `ADMIN_TOKEN` — no Supabase Auth user needed (`public.admins` is unused while token auth is active). Full checklist in README. An unapplied migration or unconfigured provider is not a working feature — the app fails closed and says so.
 
 ## Invariants (do not violate without a new user decision)
 

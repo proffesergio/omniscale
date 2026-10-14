@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { AdminDashboard, AdminLogin } from '@/components/admin/dashboard';
-import { databaseConfigured, db, getAdmin } from '@/lib/supabase';
+import { databaseConfigured, db } from '@/lib/supabase';
 import { ADMIN_PAGE_SIZE, decodeCursor, encodeCursor } from '@/lib/pagination';
+import { adminTokenConfigured, getAdminSession } from '@/lib/admin-auth';
 import type { Booking, ManualPayment, PaymentMethod, Slot } from '@/types';
 import type { AuditInput } from '@/lib/validators';
 export const dynamic = 'force-dynamic';
@@ -15,8 +16,8 @@ export default async function AdminPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const configured = databaseConfigured();
-  const user = configured ? await getAdmin() : null;
+  const configured = databaseConfigured() && adminTokenConfigured();
+  const signedIn = configured ? await getAdminSession() : false;
   const intro = (
     <div className="page-intro">
       <div className="eyebrow">OMNISCALE / TEAM WORKSPACE</div>
@@ -27,7 +28,7 @@ export default async function AdminPage({
       </h1>
     </div>
   );
-  if (!user)
+  if (!signedIn)
     return (
       <div className="container">
         {intro}
@@ -153,7 +154,7 @@ export default async function AdminPage({
     <div className="container">
       {intro}
       <AdminDashboard
-        email={user.email ?? ''}
+        email="Team"
         slots={slotRows}
         bookings={bookingRows}
         audits={auditRows}
